@@ -9,9 +9,14 @@
 #include "uart.h"
 #include "railcom_recv.h"
 
+#define NO_RAILCOM_COUNT_MAX 2000
+
 int main(void)
 {
 	//uint8_t rcv_data;
+	
+	uint16_t noRailcomCounter = 0;
+	uint16_t railcomFlushCount = 0;
 	
 	DDRB = 0xFF;
 	//DDRD = 0xFF & ~CONFIG_JUMPER;
@@ -43,13 +48,47 @@ int main(void)
 		
 		if (appTimer()) {
 			timeoutCountup();
-			if (addrViewTimeout()) {
-				set_led_power_stat(1);
+			
+			if (noRailcomCounter < NO_RAILCOM_COUNT_MAX) {
+				noRailcomCounter++;
+				if (addrViewTimeout()) {
+					set_led_power_stat(0);
+					railcomFlushCount++;
+					if (railcomFlushCount == 256) {
+						set_null_msg(0);
+					} else if (railcomFlushCount == 512) {
+						set_null_msg(1);
+					} else if (railcomFlushCount == 768) {
+						set_null_msg(2);
+					} else if (railcomFlushCount == 1024) {
+						set_null_msg(3);
+						railcomFlushCount = 0;
+					} else if (railcomFlushCount > 1024) {
+						railcomFlushCount = 0;
+					}
+				}
+			} else {
+				railcomFlushCount++;
+				if (railcomFlushCount == 256) {
+					set_led_power_stat(0);
+					set_null_msg(0);
+				} else if (railcomFlushCount == 512) {
+					set_led_power_stat(1);
+					railcomFlushCount = 0;
+				} else if (railcomFlushCount > 512) {
+					railcomFlushCount = 0;
+				}
 			}
 		}
 		
 		if (uart_rcv_size()) {
 			uartReceive(uart_getch());
+			noRailcomCounter = 0;
+			//railcomFlushCount = 0;
+		}
+		
+		if (noRailcomCounter > NO_RAILCOM_COUNT_MAX) {
+			
 		}
 		
 		
