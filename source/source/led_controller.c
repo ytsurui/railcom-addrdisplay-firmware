@@ -1,5 +1,6 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <avr/pgmspace.h>
 
 #include "common.h"
 #include "led_controller.h"
@@ -70,14 +71,46 @@ void set_7seg_timer(void)
 	sei();
 }
 
+const PROGMEM uint8_t led7segDataTable[15] = {
+	~(LED_A | LED_B | LED_C | LED_D | LED_E | LED_F),			// 0
+	~(LED_B | LED_C),											// 1
+	~(LED_A | LED_B | LED_D | LED_E | LED_G),					// 2
+	~(LED_A | LED_B | LED_C | LED_D | LED_G),					// 3
+	~(LED_B | LED_C | LED_F | LED_G),							// 4
+	~(LED_A | LED_C | LED_D | LED_F | LED_G),					// 5
+	~(LED_A | LED_C | LED_D | LED_E | LED_F | LED_G),			// 6
+	~(LED_A | LED_B | LED_C),									// 7
+	~(LED_A | LED_B | LED_C | LED_D | LED_E | LED_F | LED_G),	// 8
+	~(LED_A | LED_B | LED_C | LED_D | LED_F | LED_G),			// 9
+	~(LED_A | LED_B | LED_E | LED_F | LED_G),					// P
+	~(LED_A | LED_E | LED_F),									// r
+	~(LED_A | LED_B | LED_C | LED_D | LED_E | LED_F),			// o
+	~(LED_A | LED_B | LED_C | LED_D | LED_F | LED_G),			// g
+	~(LED_G)													// -
+};
+
+
 void set_port(uint8_t dec)
 {
+	uint8_t readCache;
+		
 	PORTB |= 0b01111111;
 	if (dec == 0xFF) {
-		//PORTB &= 0b10000000;
 		return;
 	}
 	
+	if (dec > 0x80) {
+		dec -= 119;
+		readCache = pgm_read_byte(&led7segDataTable[dec]);
+		PORTB &= readCache;
+	}
+	
+	if (dec < 10) {
+		readCache = pgm_read_byte(&led7segDataTable[dec]);
+		PORTB &= readCache;
+	}
+	
+	/*
 	if (dec == 0) {
 		//A-B-C-D-E-F
 		PORTB &= ~(LED_A | LED_B | LED_C | LED_D | LED_E | LED_F);
@@ -121,6 +154,8 @@ void set_port(uint8_t dec)
 		//G (A-B-C-D-F-G)
 		PORTB &= ~(LED_A | LED_B | LED_C | LED_D | LED_F | LED_G);
 	}
+	*/
+	
 }
 
 void set_7seg_data(uint16_t data)
