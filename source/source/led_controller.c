@@ -185,6 +185,18 @@ void set_prog_mode(void)
 	data_cache[3] = 0x81;
 }
 
+void set_null_msg(uint8_t pos) {
+	uint8_t i;
+	
+	for (i = 0; i < 4; i++) {
+		if (i == pos) {
+			data_cache[i] = 0x85;
+		} else {
+			data_cache[i] = 0xFF;
+		}
+	}
+}
+
 uint8_t appTimer(void) {
 	if (appTimerFlag) {
 		appTimerFlag = 0;
