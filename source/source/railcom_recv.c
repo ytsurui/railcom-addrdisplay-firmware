@@ -12,10 +12,14 @@
 uint8_t recvCache[4];
 uint8_t recvPos;
 
+#define RECV_ADDR_CACHE_MAX 2
+uint16_t recvAddrCache[RECV_ADDR_CACHE_MAX];
+uint8_t recvAddrPos;
+
 uint16_t recvAddr;
 
-uint8_t viewTimeout = 0;
-#define TIMEOUT_MAX	200
+uint16_t viewTimeout = 0;
+#define TIMEOUT_MAX	1000
 
 const PROGMEM uint8_t encodeDataTable[64] = {	0xAC, 0xAA, 0xA9, 0xA5, 0xA3, 0xA6, 0x9C, 0x9A,
 												0x99, 0x95, 0x93, 0x96, 0x8E, 0x8D, 0x8B, 0xB1,
@@ -65,6 +69,16 @@ uint8_t decode48Code(uint8_t code) {
 	
 }
 
+uint8_t checkRecvAddrCache(uint16_t recvAddr) {
+	uint8_t i;
+	for (i = 0; i < RECV_ADDR_CACHE_MAX; i++) {
+		if (recvAddrCache[i] != recvAddr) {
+			return (0);
+		}
+	}
+	return (1);
+}
+
 
 void railcomDecode() {
 	uint8_t ID;
@@ -81,9 +95,16 @@ void railcomDecode() {
 				recvAddr += (uint16_t)(data & 0x3F) << 8;
 			}
 			// Both Long Addr and Short Addr
-			set_led_power_stat(0);
-			set_7seg_data(recvAddr);
-			viewTimeout = 0;
+			if (checkRecvAddrCache(recvAddr)) {
+				set_led_power_stat(0);
+				set_7seg_data(recvAddr);
+				viewTimeout = 0;
+			}
+			
+			recvAddrCache[recvAddrPos] = recvAddr;
+			recvAddrPos++;
+			if (recvAddrPos >= RECV_ADDR_CACHE_MAX) recvAddrPos = 0;
+			
 		} else if (ID == 0x02) {
 			// Low (ID2)
 			recvAddr = (uint16_t)data;
